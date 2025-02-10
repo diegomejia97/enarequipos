@@ -121,102 +121,122 @@ p, label, input, button {
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
     </style>
-    <script>
-function login() {
-    var username = document.getElementById("username").value;
-    var password = document.getElementById("password").value;
-    var loginButton = document.getElementById("login-button");
-    var spinner = document.getElementById("login-spinner");
+   <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwlyue1HXzYIJsDJi8AXEL6gtk9yRCoN2xe2cywi6PIPPRThFzxXx4Jvt6zuZIcSqw7eA/exec";
 
-    if (!username || !password) {
-        alert("Por favor, complete todos los campos.");
-        return;
-    }
+    async function login() {
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+        var loginButton = document.getElementById("login-button");
+        var spinner = document.getElementById("login-spinner");
 
-    loginButton.disabled = true;
-    spinner.style.display = "inline-block";
+        if (!username || !password) {
+            alert("Por favor, complete todos los campos.");
+            return;
+        }
 
-    setTimeout(() => {
-        google.script.run.withSuccessHandler(function(response) {
-            if (response.success) {
+        loginButton.disabled = true;
+        spinner.style.display = "inline-block";
+
+        try {
+            const response = await fetch(`${API_URL}?action=loginUser&username=${username}&password=${password}`);
+            const data = await response.json();
+
+            if (data.success) {
                 document.getElementById("login-section").style.display = "none";
                 document.getElementById("search-section").style.display = "block";
-                document.getElementById("welcome").innerText = "Bienvenido, " + response.name;
+                document.getElementById("welcome").innerText = "Bienvenido, " + data.name;
             } else {
                 alert("Credenciales incorrectas");
                 loginButton.disabled = false;
                 spinner.style.display = "none";
             }
-        }).loginUser(username, password);
-    }, 1000);
-}
-
-        function buscarCodigo() {
-            var codigo = document.getElementById("codigo").value;
-            document.getElementById("resultado").innerHTML = "<div class='text-center'><div class='spinner-border text-primary' role='status'></div><p>Cargando...</p></div>";
-            
-            google.script.run.withSuccessHandler(function(response) {
-                if (!response || response.error) {
-                    alert(response.error || "Error desconocido");
-                    return;
-                }
-
-                let imagenesHTML = "";
-                if (response.imagen) {
-                    imagenesHTML += `<div class='col-md-6'><h5>Imagen del equipo</h5><img src="${response.imagen}" class="img-fluid rounded shadow"></div>`;
-                }
-                if (response.tableroImagen) {
-                    imagenesHTML += `<div class='col-md-6'><h5>Imagen del tablero</h5><img src="${response.tableroImagen}" class="img-fluid rounded shadow"></div>`;
-                }
-
-                let mantenimientoButton = `<button class="btn btn-primary mt-3" onclick="verMantenimientos('${response.codigo}')">Ver Mantenimientos Asociados</button>`;
-                
-                document.getElementById("resultado").innerHTML = `
-                    <div class="card p-4 shadow-lg">
-                        <h3 class="text-primary">${response.tipo}: ${response.codigo}</h3>
-                        <p><b>Nombre:</b> ${response.nombre}</p>
-                        <p><b>Ubicación:</b> ${response.ubicacion}</p>
-                        <p><b>Área:</b> ${response.area}</p>
-                        <p><b>Estado:</b> ${response.estado}</p>
-                        <p><b>Mantenimiento:</b> ${response.mantenimiento}</p>
-                        ${response.tipo === "Equipo" ? `<p><b>Tablero:</b> ${response.tablero}</p>` : `<p><b>Equipos:</b> ${response.equipos}</p>`}
-                        <div class="row">${imagenesHTML}</div>
-                        <div class="text-center">${mantenimientoButton}</div>
-                    </div>
-                `;
-            }).buscarCodigo(codigo);
+        } catch (error) {
+            console.error("Error en login:", error);
+            alert("Error al conectar con el servidor.");
+            loginButton.disabled = false;
+            spinner.style.display = "none";
         }
+    }
 
-        function verMantenimientos(codigo) {
-            document.getElementById("mantenimiento-list").innerHTML = "<div class='text-center'><div class='spinner-border text-primary' role='status'></div><p>Cargando...</p></div>";
-            var modal = new bootstrap.Modal(document.getElementById('modalMantenimientos'));
-            modal.show();
-            
-            google.script.run.withSuccessHandler(function(response) {
-                if (response.success) {
-                    let contenido = `<table class="table table-hover table-bordered text-center"><thead class="table-dark"><tr><th>Fecha</th><th>Descripción</th><th>Técnico</th><th>Tipo</th><th>Duración</th><th>Costo</th><th>Estado</th><th>Observaciones</th></tr></thead><tbody>`;
-                    response.mantenimientos.forEach(m => {
-                        contenido += `<tr><td>${m.fecha}</td><td>${m.descripcion}</td><td>${m.tecnico}</td><td>${m.tipo}</td><td>${m.duracion}</td><td>${m.costo}</td><td>${m.estado}</td><td>${m.observaciones}</td></tr>`;
-                    });
-                    contenido += "</tbody></table>";
-                    document.getElementById("mantenimiento-list").innerHTML = contenido;
-                } else {
-                    alert(response.error);
-                }
-            }).buscarMantenimientos(codigo);
+    async function buscarCodigo() {
+        var codigo = document.getElementById("codigo").value;
+        document.getElementById("resultado").innerHTML = "<div class='text-center'><div class='spinner-border text-primary' role='status'></div><p>Cargando...</p></div>";
+
+        try {
+            const response = await fetch(`${API_URL}?action=buscarCodigo&codigo=${codigo}`);
+            const data = await response.json();
+
+            if (!data || data.error) {
+                alert(data.error || "Error desconocido");
+                return;
+            }
+
+            let imagenesHTML = "";
+            if (data.imagen) {
+                imagenesHTML += `<div class='col-md-6'><h5>Imagen del equipo</h5><img src="${data.imagen}" class="img-fluid rounded shadow"></div>`;
+            }
+            if (data.tableroImagen) {
+                imagenesHTML += `<div class='col-md-6'><h5>Imagen del tablero</h5><img src="${data.tableroImagen}" class="img-fluid rounded shadow"></div>`;
+            }
+
+            let mantenimientoButton = `<button class="btn btn-primary mt-3" onclick="verMantenimientos('${data.codigo}')">Ver Mantenimientos Asociados</button>`;
+
+            document.getElementById("resultado").innerHTML = `
+                <div class="card p-4 shadow-lg">
+                    <h3 class="text-primary">${data.tipo}: ${data.codigo}</h3>
+                    <p><b>Nombre:</b> ${data.nombre}</p>
+                    <p><b>Ubicación:</b> ${data.ubicacion}</p>
+                    <p><b>Área:</b> ${data.area}</p>
+                    <p><b>Estado:</b> ${data.estado}</p>
+                    <p><b>Mantenimiento:</b> ${data.mantenimiento}</p>
+                    ${data.tipo === "Equipo" ? `<p><b>Tablero:</b> ${data.tablero}</p>` : `<p><b>Equipos:</b> ${data.equipos}</p>`}
+                    <div class="row">${imagenesHTML}</div>
+                    <div class="text-center">${mantenimientoButton}</div>
+                </div>
+            `;
+        } catch (error) {
+            console.error("Error en búsqueda de código:", error);
+            alert("Error al conectar con el servidor.");
         }
+    }
+
+    async function verMantenimientos(codigo) {
+        document.getElementById("mantenimiento-list").innerHTML = "<div class='text-center'><div class='spinner-border text-primary' role='status'></div><p>Cargando...</p></div>";
+        var modal = new bootstrap.Modal(document.getElementById('modalMantenimientos'));
+        modal.show();
+
+        try {
+            const response = await fetch(`${API_URL}?action=buscarMantenimientos&codigo=${codigo}`);
+            const data = await response.json();
+
+            if (data.success) {
+                let contenido = `<table class="table table-hover table-bordered text-center"><thead class="table-dark"><tr><th>Fecha</th><th>Calibraciones Asociadas</th><th>Estado Actual</th><th>Responsable</th><th>Problemas Identificados</th><th>Actividades Realizadas</th><th>Observaciones</th></tr></thead><tbody>`;
+                data.mantenimientos.forEach(m => {
+                    contenido += `<tr><td>${m.fecha}</td><td>${m.descripcion}</td><td>${m.tecnico}</td><td>${m.tipo}</td><td>${m.duracion}</td><td>${m.costo}</td><td>${m.observaciones}</td></tr>`;
+                });
+                contenido += "</tbody></table>";
+                document.getElementById("mantenimiento-list").innerHTML = contenido;
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error("Error al obtener mantenimientos:", error);
+            alert("Error al conectar con el servidor.");
+        }
+    }
 
     function logout() {
         document.getElementById("login-section").style.display = "block";
         document.getElementById("search-section").style.display = "none";
         document.getElementById("username").value = "";
         document.getElementById("password").value = "";
-        
-        // Nuevas líneas agregadas
+
+        // Habilitar el botón de login y ocultar spinner al cerrar sesión
         document.getElementById("login-button").disabled = false;
         document.getElementById("login-spinner").style.display = "none";
     }
-    </script>
+</script>
 </head>
   <body class="container py-4">
       <div id="login-section" class="login-container text-center">
